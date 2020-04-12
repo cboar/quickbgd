@@ -238,7 +238,6 @@ int main(int argc, char **argv) {
 	imlib_context_pop();
 	imlib_context_free(context);
 
-	set_background(pixmaps[0]);
 	loop_message_queue();
 
 	return 0;
