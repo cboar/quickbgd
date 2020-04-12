@@ -132,7 +132,8 @@ int load_image(ImageMode mode, const char *arg, Imlib_Image rootimg, XineramaScr
 	return 1;
 }
 
-void set_background(Pixmap pixmap) {
+void set_background(int index) {
+	Pixmap pixmap = pixmaps[index];
 	if(set_root_atoms(pixmap) == 0)
 		fprintf(stderr, "Couldn't create atoms...\n");
 
@@ -172,7 +173,9 @@ void loop_message_queue(){
 		/* Convert ASCII number to decimal */
 		int n = buffer[0] - '0';
 		if(n >= 1 && n <= pixc){
-			set_background(pixmaps[n - 1]);
+			set_background(n - 1);
+		} else {
+			set_background(0);
 		}
 	}
 }
