@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mqueue.h>
+#define MAX_IMAGES 32
 
 
 typedef enum { Full, Fill, Center, Tile, Xtend, Cover } ImageMode;
@@ -18,7 +19,7 @@ typedef struct {
 int screen = 0;
 Display *display;
 int pixc = 0;
-Pixmap pixmaps[8];
+Pixmap pixmaps[MAX_IMAGES];
 
 
 // Adapted from fluxbox' bsetroot
@@ -145,35 +146,52 @@ void set_background(Pixmap pixmap) {
 	XSync(display, False);
 }
 
-void init_message_queue(){
+void loop_message_queue(){
 	char buffer[1];
 
-	/* initialize the queue attributes */
+	/* Define message queue attributes */
 	struct mq_attr attr = {
 		.mq_flags = 0,
-		.mq_maxmsg = 10,
+		.mq_maxmsg = 8,
 		.mq_msgsize = 1,
 		.mq_curmsgs = 0
 	};
 
-	/* create the message queue */
+	/* Open the message queue */
 	mqd_t mq = mq_open("/quickbgd", O_CREAT | O_RDONLY, 0644, &attr);
 	if(mq == (mqd_t) -1){
 		perror("Error creating message queue");
 		exit(1);
 	}
 
-	//while(1){
-	//	ssize_t bytes_read = mq_receive(mq, buffer, 1, NULL);
-	//}
+	while(1){
+		ssize_t bytes_read = mq_receive(mq, buffer, 1, NULL);
+		if(bytes_read != 1)
+			continue;
+
+		/* Convert ASCII number to decimal */
+		int n = buffer[0] - '0';
+		if(n >= 1 && n <= pixc){
+			set_background(pixmaps[n - 1]);
+		}
+	}
 }
 
 int main(int argc, char **argv) {
+	if(argc < 2){
+		fprintf(stderr, "At least one image is required.\n");
+		return 1;
+	}
+	if(argc - 1 > MAX_IMAGES){
+		fprintf(stderr, "Warning: surpassed maximum images (%d)", MAX_IMAGES);
+	}
+
+
 	/* Open display */
 	display = XOpenDisplay(NULL);
 	if(!display){
 		fprintf(stderr, "Cannot open X display!\n");
-		exit(123);
+		return 1;
 	}
 	int noutputs = 0;
 	XineramaScreenInfo* outputs = XineramaQueryScreens(display, &noutputs);
@@ -213,19 +231,15 @@ int main(int argc, char **argv) {
 		imlib_render_image_on_drawable(0, 0);
 		imlib_free_image();
 		pixmaps[pixc++] = pixmap;
+		if(pixc == MAX_IMAGES)
+			break;
 	}
 	imlib_free_color_range();
 	imlib_context_pop();
 	imlib_context_free(context);
 
-	/* Listener loop */
-	init_message_queue();
-
-	/* Cleanup */
-	for(int i = 0; i < pixc; i++){
-		XFreePixmap(display, pixmaps[i]);
-	}
-	XFree(outputs);
+	set_background(pixmaps[0]);
+	loop_message_queue();
 
 	return 0;
 }

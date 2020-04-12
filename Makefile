@@ -1,11 +1,14 @@
-CC?=gcc
-CFLAGS?=-g -O2 -Wall
-LDFLAGS?=-Wl,--no-as-needed -lX11 -lImlib2 -lXinerama -lrt
+CC=gcc
+CFLAGS=-O2 -Wall
+LDFLAGS=-Wl,--no-as-needed -lrt
 
+all: quickbgd quickbg
 
-all: quickbgd
+quickbgd:
+	$(CC) $(CFLAGS) $(LDFLAGS) -lX11 -lImlib2 -lXinerama -o quickbgd quickbgd.c
 
-quickbgd: quickbgd.o
+quickbg:
+	$(CC) $(CFLAGS) $(LDFLAGS) -o quickbg quickbg.c
 
 clean:
-	rm -f *.o quickbgd
+	rm -f quickbg quickbgd
